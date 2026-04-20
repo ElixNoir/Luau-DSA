@@ -177,6 +177,7 @@ function Module.upsert(self: BinarySearchTree, value: any)
   local current = self.Root
   if not current then
     self.Root = 1
+    self.Size = 1
     self[1], self[2], self[3] = value, false, false
     return
   end
