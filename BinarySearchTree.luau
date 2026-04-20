@@ -48,7 +48,7 @@ local table_remove = table.remove
 local function allocate(self: BinarySearchTree, value: any): number
   local freeRoot = self.FreeRoot
   if freeRoot then
-    self.FreeRoot = self[freeRoot + 1]
+    self.FreeRoot = self[freeRoot]
     return freeRoot
   end
   return #self + 1
@@ -57,9 +57,9 @@ end
 local function free(self: BinarySearchTree, address: number)
   local freeRoot = self.FreeRoot
   if freeRoot then
-    self[address + 1] = freeRoot
+    self[address] = freeRoot
   else
-    self[address + 1] = false
+    self[address] = false
   end
   self.FreeRoot = address
 end
