@@ -65,16 +65,18 @@ function Module.changeKey(self: MinHeap, key: any, new: any)
     heapifyMinimum(self, key)
   else
     local currentKey = new
+    self[key] = new
+
     while key ~= 1 do
       local parent = (key - 1) // 2 + 1
       local parentKey = self[parent]
+
       if currentKey >= parentKey then
         break
       end
       
       self[key], self[parent] = parentKey, currentKey
       key = parent
-      currentKey = parentKey
     end
   end
 end
@@ -101,6 +103,7 @@ function Module.extractMinimum(self: MinHeap): false | any
   self.Size = size - 1
 
   heapifyMinimum(self, 1)
+  self[size] = nil
 
   return root
 end
@@ -124,7 +127,6 @@ function Module.insert(self: MinHeap, key: any): boolean
     end
     self[current], self[parent] = parentKey, key
     current = parent
-    key = parentKey
   end
   
   return true
@@ -143,6 +145,7 @@ function Module.remove(self: MinHeap, key: any)
   end
 
   self[key] = self[size]
+  self[size] = nil
   self.Size = size - 1
   heapifyMinimum(self, key)
 end
