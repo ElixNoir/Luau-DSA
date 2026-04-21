@@ -39,19 +39,33 @@ function Module.new(): BinarySearchTree
 end
 
 
+-- -- Constants
+
+local LEFT = 1
+local RIGHT = 2
+
+
 -- -- Helpers
 
 local table_create = table.create
 local table_insert = table.insert
 local table_remove = table.remove
 
-local function allocate(self: BinarySearchTree, value: any): number
-  local freeRoot = self.FreeRoot
-  if freeRoot then
-    self.FreeRoot = self[freeRoot]
-    return freeRoot
+local function allocate(self: BinarySearchTree, key: any): number
+  local address = self.FreeRoot
+  if address then
+    self.FreeRoot = self[address]
+  else
+    address = #self + 1
   end
-  return #self + 1
+
+  self[address :: number] = key
+  self[address :: number + LEFT] = false
+  self[address :: number + RIGHT] = false
+  
+  self.Size += 1
+  
+  return address :: number
 end
 
 local function free(self: BinarySearchTree, address: number)
@@ -61,31 +75,33 @@ local function free(self: BinarySearchTree, address: number)
   else
     self[address] = false
   end
+  
   self.FreeRoot = address
+  self.Size -= 1
 end
 
 
 -- -- Methods
 
 --[[
-  Find a value if it exists.
-  returns: valueWasFound
+  Find a key if it exists.
+  returns: keyWasFound
 
   Space Complexity: O(1)
   Time Complexity: Ω(1), Theta(log_2(n)), O(n)
 ]]
-function Module.find(self: BinarySearchTree, value: any): boolean
+function Module.find(self: BinarySearchTree, key: any): false | number
   local current = self.Root
   
   while current do
-    local currentValue = self[current]
-    if currentValue == value then
-      return true
+    local currentkey = self[current]
+    if currentkey == key then
+      return current
     end
-    if currentValue > value then
-      current = self[current + 1]
+    if currentkey > key then
+      current = self[current + LEFT]
     else
-      current = self[current + 2]
+      current = self[current + RIGHT]
     end
   end
 
@@ -93,26 +109,26 @@ function Module.find(self: BinarySearchTree, value: any): boolean
 end
 
 --[[
-  Remove a value if it exists.
-  returns: valueWasRemoved
+  Remove a key if it exists.
+  returns: keyWasRemoved
 
   Space Complexity: O(1)
   Time Complexity: Ω(1), Theta(log_2(n)), O(n)
 ]]
-function Module.remove(self: BinarySearchTree, value: any): boolean
+function Module.remove(self: BinarySearchTree, key: any): false | number
   local current = self.Root
   
   local parent = nil
   while current do
-    local currentValue = self[current]
-    if currentValue == value then
+    local currentkey = self[current]
+    if currentkey == key then
       break
     end
     parent = current
-    if currentValue > value then
-      current = self[current + 1]
+    if currentkey > key then
+      current = self[current + LEFT]
     else
-      current = self[current + 2]
+      current = self[current + RIGHT]
     end
   end
 
@@ -120,102 +136,89 @@ function Module.remove(self: BinarySearchTree, value: any): boolean
     return false
   end
 
-  local left, right = self[current + 1], self[current + 2]
+  local left, right = self[current + LEFT], self[current + RIGHT]
   if not left or not right then
-    local replacement
-    if not left then
-        replacement = right
-    else
-        replacement = left
-    end
+    local replacement = left or right
 
     if not parent then
       self.Root = replacement
-      self.Size -= 1
-      return true
-    end
-
-    if current == self[parent + 1] then
-        self[parent + 1] = replacement
+      free(self, current)
+    elseif self[parent + LEFT] == current then
+      self[parent + LEFT] = replacement
     else
-        self[parent + 2] = replacement
+      self[parent + RIGHT] = replacement
     end
 
     free(self, current)
-  else
-    local parent = current
-    local successor = right
-    left = self[successor + 1]
-    while left do
-      parent = successor
-      successor = left
-    end
-
-    self[current] = self[successor]
-
-    right = self[successor + 2]
-    if parent ~= current then
-      self[parent + 1] = right
-    else
-      self[parent + 2] = right
-    end
-
-    free(self, successor)
+    return current
+  end
+  
+  parent = current
+  left = self[right + LEFT]
+  while left do
+    parent = right
+    right = left
+    left = self[right + LEFT]
   end
 
-  self.Size -= 1
-  return true
+  self[current] = self[right]
+
+  right = self[right + RIGHT]
+  if parent == current then
+    self[parent + RIGHT] = right
+  else
+    self[parent + LEFT] = right
+  end
+
+  free(self, right :: number)
+
+  return current
 end
 
 --[[
-  Insert new value or update existing value.
+  Insert new key or update existing key.
 
   Space Complexity: O(1)
   Time Complexity: Ω(1), Theta(log_2(n)), O(n)
 ]]
-function Module.upsert(self: BinarySearchTree, value: any)
+function Module.upsert(self: BinarySearchTree, key: any): false | number
   local current = self.Root
   if not current then
-    self.Root = 1
-    self.Size = 1
-    self[1], self[2], self[3] = value, false, false
-    return
+    local address = allocate(self, key)
+    self.Root = address
+    return address
   end
 
-  local currentValue: any
   while true do
-    currentValue = self[current]
-    local left = self[current + 1]
-    if left and currentValue > value then
-      current = left
-      continue
-    end
-    local right = self[current + 2]
-    if right and currentValue < value then
-      current = right
-    else
-      if currentValue == value then
-        self[current] = value
-        return
+    local currentKey = self[current]
+
+    if key == currentKey then
+      self[current] = key
+      return false
+    elseif key < currentKey then
+      local left = self[current + LEFT]
+      if left then
+        current = left
+      else
+        local address = allocate(self, key)
+        self[current + LEFT] = address
+        return address
       end
-      break
+    else
+      local right = self[current + RIGHT]
+      if right then
+        current = right
+      else
+        local address = allocate(self, key)
+        self[current + RIGHT] = address
+        return address
+      end
     end
   end
-
-  local address = allocate(self, value)
-  
-  if currentValue > value then
-    self[current + 1] = address
-  else
-    self[current + 2] = address
-  end
-
-  self[address], self[address + 1], self[address + 2] = value, false, false
-  self.Size += 1
 end
 
 --[[
-  Get an array containing values from an inorder traversal of the given BinarySearchTree.
+  Get an array containing keys from an inorder traversal of the given BinarySearchTree.
 
   Space Complexity: O(n)
   Time Complexity: Ω(n), O(n)
@@ -230,7 +233,7 @@ function Module.inorder(self: BinarySearchTree): {any}
   while current or #stack > 0 do
     while current do
       table_insert(stack, current)
-      current = self[current + 1]
+      current = self[current + LEFT]
     end
 
     current = table_remove(stack)
@@ -238,14 +241,14 @@ function Module.inorder(self: BinarySearchTree): {any}
     array[array_Top] = self[current :: number] :: number
     array_Top += 1
 
-    current = self[current :: number + 2]
+    current = self[current :: number + RIGHT]
   end
 
   return array
 end
 
 --[[
-  Get an array containing values from a postorder traversal of the given BinarySearchTree.
+  Get an array containing keys from a postorder traversal of the given BinarySearchTree.
 
   Space Complexity: O(n)
   Time Complexity: Ω(n), O(n)
@@ -260,7 +263,7 @@ function Module.postorder(self: BinarySearchTree): {any}
     array[array_Top] = self[current]
     array_Top -= 1
     
-    local left, right = self[current + 1], self[current + 2]
+    local left, right = self[current + LEFT], self[current + RIGHT]
     if left then
       table_insert(stack, left)
     end
@@ -275,7 +278,7 @@ function Module.postorder(self: BinarySearchTree): {any}
 end
 
 --[[
-  Get an array containing values from a preorder traversal of the given BinarySearchTree.
+  Get an array containing keys from a preorder traversal of the given BinarySearchTree.
 
   Space Complexity: O(n)
   Time Complexity: Ω(n), O(n)
@@ -290,7 +293,7 @@ function Module.preorder(self: BinarySearchTree): {any}
     array[array_Top] = self[current]
     array_Top += 1
     
-    local left, right = self[current + 1], self[current + 2]
+    local left, right = self[current + LEFT], self[current + RIGHT]
     if right then
       table_insert(stack, right)
     end
