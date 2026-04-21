@@ -50,22 +50,22 @@ end
 
 -- -- Methods
 
-local function allocate(self: SplayTree, key: any): number
-  local freeRoot = self.FreeRoot
-  if freeRoot then
-    self.FreeRoot = self[freeRoot]
-    return freeRoot
+local function allocate(self: SplayTree, key: any, parent: false | number): number
+  local address = self.FreeRoot
+  if address then
+    self.FreeRoot = self[address]
+  else
+    address = #self + 1
   end
 
-  local address = #self + 1
-  self[address] = key
-  self[address + LEFT] = false
-  self[address + RIGHT] = false
-  self[address + PARENT] = false
-
+  self[address :: number] = key
+  self[address :: number + LEFT] = false
+  self[address :: number + RIGHT] = false
+  self[address :: number + PARENT] = parent
+  
   self.Size += 1
-
-  return address
+  
+  return address :: number
 end
 
 local function free(self: SplayTree, address: number)
@@ -75,7 +75,9 @@ local function free(self: SplayTree, address: number)
   else
     self[address] = false
   end
+  
   self.FreeRoot = address
+  self.Size -= 1
 end
 
 local function rotate(self: SplayTree, address: number)
@@ -87,15 +89,17 @@ local function rotate(self: SplayTree, address: number)
   local grandParent = self[parent + PARENT]
 
   if self[parent + LEFT] == address then
-    self[parent + LEFT] = self[address + RIGHT]
-    if self[address + RIGHT] then
-      self[self[address + RIGHT] + PARENT] = parent
+    local right = self[address + RIGHT]
+    self[parent + LEFT] = right
+    if right then
+      self[right + PARENT] = parent
     end
     self[address + RIGHT] = parent
   else
-    self[parent + RIGHT] = self[address + LEFT]
-    if self[address + LEFT] then
-      self[self[address + LEFT] + PARENT] = parent
+    local left = self[address + LEFT]
+    self[parent + RIGHT] = left
+    if left then
+      self[left + PARENT] = parent
     end
     self[address + LEFT] = parent
   end
@@ -142,27 +146,27 @@ function Module.upsert(self: SplayTree, key: any): false | number
   end
   
   while true do
-    local currentValue = self[current]
-    if key == currentValue then
+    local currentKey = self[current]
+    if key == currentKey then
       return false
-    elseif key < self[current] then
-      if not self[current + LEFT] then
-        local address = allocate(self, key)
+    elseif key < currentKey then
+      local left = self[current + LEFT]
+      if not left then
+        local address = allocate(self, key, current)
         self[current + LEFT] = address
-        self[address + PARENT] = current
         splay(self, address)
         return address
       end
-      current = self[current + LEFT]
+      current = left
     else
-      if not self[current + RIGHT] then
-        local address = allocate(self, key)
+      local right = self[current + RIGHT]
+      if not right then
+        local address = allocate(self, key, current)
         self[current + RIGHT] = address
-        self[address + PARENT] = current
         splay(self, address)
         return address
       end
-      current = self[current + RIGHT]
+      current = right
     end
   end
 end
