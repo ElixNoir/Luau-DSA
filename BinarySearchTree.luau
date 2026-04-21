@@ -224,7 +224,7 @@ end
   Time Complexity: Ω(n), O(n)
 ]]
 function Module.inorder(self: BinarySearchTree): {any}
-  local array = table_create(0, self.Size)
+  local array = table_create(self.Size, 0)
   local array_Top = 1
   local stack = {}
 
@@ -255,7 +255,7 @@ end
 ]]
 function Module.postorder(self: BinarySearchTree): {any}
   local array_Top = self.Size
-  local array = table_create(0, array_Top)
+  local array = table_create(array_Top, 0)
   local stack = {}
 
   local current = self.Root
@@ -284,7 +284,7 @@ end
   Time Complexity: Ω(n), O(n)
 ]]
 function Module.preorder(self: BinarySearchTree): {any}
-  local array = table_create(0, self.Size)
+  local array = table_create(self.Size, 0)
   local array_Top = 1
   local stack = {}
 
