@@ -34,21 +34,8 @@ local PARENT = 3
 -- -- Helpers
 
 local table_create = table.create
-
-
--- -- Functions
-
-function Module.new(capacity: number?): SplayTree
-  local self = table_create((capacity or 0) * 4, 0) :: SplayTree
-  self.FreeRoot = false
-  self.Root = false
-  self.Size = 0
-
-  return setmetatable(self, Module)
-end
-
-
--- -- Methods
+local table_insert = table.insert
+local table_remove = table.remove
 
 local function allocate(self: SplayTree, key: any, parent: false | number): number
   local address = self.FreeRoot
@@ -137,6 +124,97 @@ local function splay(self: SplayTree, address: number)
   end
 end
 
+
+-- -- Functions
+
+function Module.new(): SplayTree
+  return setmetatable({
+    FreeRoot = false,
+    Root = false,
+    Size = 0
+  }, Module)
+end
+
+
+-- -- Methods
+
+--[[
+  Find a key if it exists.
+  returns: keyWasFound
+
+  Space Complexity: O(1)
+  Time Complexity: Ω(1), Theta(log_2(n)), O(n)
+]]
+function Module.find(self: SplayTree, key: any): false | number
+  local current = self.Root
+  local last = false
+
+  while current do
+    last = current
+    local currentValue = self[current]
+    if key == currentValue then
+      splay(self, current)
+      return current
+    elseif key < currentValue then
+      current = self[current + LEFT]
+    else
+      current = self[current + RIGHT]
+    end
+  end
+
+  if last then
+    splay(self, last :: number)
+  end
+
+  return false
+end
+
+--[[
+  Remove a key if it exists.
+  returns: keyWasRemoved
+
+  Space Complexity: O(1)
+  Time Complexity: Ω(1), Theta(log_2(n)), O(n)
+]]
+function Module.remove(self: SplayTree, key: any): false | number
+  local address = self:find(key)
+  if not address then
+    return false
+  end
+
+  local left = self[address + LEFT]
+  local right = self[address + RIGHT]
+
+  if not left then
+    self.Root = right
+    if right then
+      self[right + PARENT] = false
+    end
+  else
+    self[left + PARENT] = false
+    local m = left
+    while self[m + RIGHT] do
+      m = self[m + RIGHT]
+    end
+    splay(self, m)
+    self[m + RIGHT] = right
+    if right then
+      self[right + PARENT] = m
+    end
+    self.Root = m
+  end
+
+  free(self, address)
+  
+  return address
+end
+
+--[[
+  Insert new key or update existing key.
+
+  Space Complexity: O(1)
+  Time Complexity: Ω(1), Theta(log_2(n)), O(n)
+]]
 function Module.upsert(self: SplayTree, key: any): false | number
   local current = self.Root
   if not current then
@@ -171,61 +249,94 @@ function Module.upsert(self: SplayTree, key: any): false | number
   end
 end
 
-function Module.find(self: SplayTree, key: any): false | number
+--[[
+  Get an array containing keys from an inorder traversal of the given BinarySearchTree.
+
+  Space Complexity: O(n)
+  Time Complexity: Ω(n), O(n)
+]]
+function Module.inorder(self: SplayTree): {any}
+  local array = table_create(self.Size, 0)
+  local array_Top = 1
+  local stack = {}
+
   local current = self.Root
-  local last = false
 
-  while current do
-    last = current
-    local currentValue = self[current]
-    if key == currentValue then
-      splay(self, current)
-      return current
-    elseif key < currentValue then
+  while current or #stack > 0 do
+    while current do
+      table_insert(stack, current)
       current = self[current + LEFT]
-    else
-      current = self[current + RIGHT]
     end
+
+    current = table_remove(stack)
+    
+    array[array_Top] = self[current :: number] :: number
+    array_Top += 1
+
+    current = self[current :: number + RIGHT]
   end
 
-  if last then
-    splay(self, last :: number)
-  end
-
-  return false
+  return array
 end
 
-function Module.remove(self: SplayTree, key: any): false | number
-  local address = self:find(key)
-  if not address then
-    return false
-  end
+--[[
+  Get an array containing keys from a postorder traversal of the given BinarySearchTree.
 
-  local left = self[address + LEFT]
-  local right = self[address + RIGHT]
+  Space Complexity: O(n)
+  Time Complexity: Ω(n), O(n)
+]]
+function Module.postorder(self: SplayTree): {any}
+  local array_Top = self.Size
+  local array = table_create(array_Top, 0)
+  local stack = {}
 
-  if not left then
-    self.Root = right
+  local current = self.Root
+  while current do
+    array[array_Top] = self[current]
+    array_Top -= 1
+    
+    local left, right = self[current + LEFT], self[current + RIGHT]
+    if left then
+      table_insert(stack, left)
+    end
     if right then
-      self[right + PARENT] = false
+      table_insert(stack, right)
     end
-  else
-    self[left + PARENT] = false
-    local m = left
-    while self[m + RIGHT] do
-      m = self[m + RIGHT]
-    end
-    splay(self, m)
-    self[m + RIGHT] = right
-    if right then
-      self[right + PARENT] = m
-    end
-    self.Root = m
-  end
 
-  free(self, address)
+    current = table_remove(stack)
+  end
   
-  return address
+  return array
+end
+
+--[[
+  Get an array containing keys from a preorder traversal of the given BinarySearchTree.
+
+  Space Complexity: O(n)
+  Time Complexity: Ω(n), O(n)
+]]
+function Module.preorder(self: SplayTree): {any}
+  local array = table_create(self.Size, 0)
+  local array_Top = 1
+  local stack = {}
+
+  local current = self.Root
+  while current do
+    array[array_Top] = self[current]
+    array_Top += 1
+    
+    local left, right = self[current + LEFT], self[current + RIGHT]
+    if right then
+      table_insert(stack, right)
+    end
+    if left then
+      table_insert(stack, left)
+    end
+
+    current = table_remove(stack)
+  end
+  
+  return array
 end
 
 
