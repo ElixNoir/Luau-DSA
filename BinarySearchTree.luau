@@ -313,7 +313,7 @@ function Module.levelorder(self: BinarySearchTree): {any}
   end
 
   local queue = {}
-  local head = 1
+  local head = 0
   
   while head <= #queue do
     table_insert(array, self[current])
