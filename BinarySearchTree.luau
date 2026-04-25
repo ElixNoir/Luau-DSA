@@ -84,8 +84,35 @@ end
 -- -- Methods
 
 --[[
+  Find the greatest key if it exists.
+  returns: false | nodeAddress
+
+  Space Complexity: O(1)
+  Time Complexity: Ω(1), Theta(log_2(n)), O(n)
+]]
+function Module.ceiling(self: BinarySearchTree, key: any): false | number
+  local current = self.Root
+  local candidate = current
+
+  while current do
+    local currentKey = self[current]
+
+    if currentKey == key then
+      return current
+    elseif currentKey > key then
+      candidate = current
+      current = self[current + LEFT]
+    else
+      current = self[current + RIGHT]
+    end
+  end
+
+  return candidate
+end
+
+--[[
   Find a key if it exists.
-  returns: keyWasFound
+  returns: false | nodeAddress
 
   Space Complexity: O(1)
   Time Complexity: Ω(1), Theta(log_2(n)), O(n)
@@ -109,8 +136,35 @@ function Module.find(self: BinarySearchTree, key: any): false | number
 end
 
 --[[
+  Find the least key if it exists.
+  returns: false | nodeAddress
+
+  Space Complexity: O(1)
+  Time Complexity: Ω(1), Theta(log_2(n)), O(n)
+]]
+function Module.floor(self: BinarySearchTree, key: any): false | number
+  local current = self.Root
+  local candidate = current
+
+  while current do
+    local currentKey = self[current]
+
+    if currentKey == key then
+      return current
+    elseif currentKey < key then
+      candidate = current
+      current = self[current + RIGHT]
+    else
+      current = self[current + LEFT]
+    end
+  end
+
+  return candidate
+end
+
+--[[
   Remove a key if it exists.
-  returns: keyWasRemoved
+  returns: false | removedNodeAddress
 
   Space Complexity: O(1)
   Time Complexity: Ω(1), Theta(log_2(n)), O(n)
@@ -142,7 +196,6 @@ function Module.remove(self: BinarySearchTree, key: any): false | number
 
     if not parent then
       self.Root = replacement
-      free(self, current)
     elseif self[parent + LEFT] == current then
       self[parent + LEFT] = replacement
     else
@@ -163,11 +216,11 @@ function Module.remove(self: BinarySearchTree, key: any): false | number
 
   self[current] = self[right]
 
-  right = self[right + RIGHT]
+  local replacement = self[right + RIGHT]
   if parent == current then
-    self[parent + RIGHT] = right
+    self[parent + RIGHT] = replacement
   else
-    self[parent + LEFT] = right
+    self[parent + LEFT] = replacement
   end
 
   free(self, right :: number)
@@ -219,13 +272,13 @@ end
 
 --[[
   Get an array containing keys from an inorder traversal of the given BinarySearchTree.
+  returns: inorderArray
 
   Space Complexity: O(n)
   Time Complexity: Ω(n), O(n)
 ]]
 function Module.inorder(self: BinarySearchTree): {any}
-  local array = table_create(self.Size, 0)
-  local array_Top = 1
+  local array = table_create(self.Size)
   local stack = {}
 
   local current = self.Root
@@ -237,10 +290,7 @@ function Module.inorder(self: BinarySearchTree): {any}
     end
 
     current = table_remove(stack)
-    
-    array[array_Top] = self[current :: number] :: number
-    array_Top += 1
-
+    table_insert(array, self[current :: number] :: number)
     current = self[current :: number + RIGHT]
   end
 
@@ -248,20 +298,57 @@ function Module.inorder(self: BinarySearchTree): {any}
 end
 
 --[[
+  Get an array containing keys from a levelorder traversal of the given BinarySearchTree.
+  returns: levelorderArray
+
+  Space Complexity: O(n)
+  Time Complexity: Ω(n), O(n)
+]]
+function Module.levelorder(self: BinarySearchTree): {any}
+  local array = table_create(self.Size)
+
+  local current = self.Root
+  if not current then
+    return array
+  end
+
+  local queue = {}
+  local head = 1
+  
+  while head <= #queue do
+    table_insert(array, self[current])
+
+    local left = self[current + LEFT]
+    local right = self[current + RIGHT]
+
+    if left then
+      table_insert(queue, left)
+    end
+    if right then
+      table_insert(queue, right)
+    end
+
+    head += 1
+    current = queue[head]
+  end
+
+  return array
+end
+
+--[[
   Get an array containing keys from a postorder traversal of the given BinarySearchTree.
+  returns: postorderArray
 
   Space Complexity: O(n)
   Time Complexity: Ω(n), O(n)
 ]]
 function Module.postorder(self: BinarySearchTree): {any}
-  local array_Top = self.Size
-  local array = table_create(array_Top, 0)
+  local array = table_create(self.Size)
   local stack = {}
 
   local current = self.Root
   while current do
-    array[array_Top] = self[current]
-    array_Top -= 1
+    table_insert(array, self[current])
     
     local left, right = self[current + LEFT], self[current + RIGHT]
     if left then
@@ -279,19 +366,18 @@ end
 
 --[[
   Get an array containing keys from a preorder traversal of the given BinarySearchTree.
+  returns: preorderArray
 
   Space Complexity: O(n)
   Time Complexity: Ω(n), O(n)
 ]]
 function Module.preorder(self: BinarySearchTree): {any}
-  local array = table_create(self.Size, 0)
-  local array_Top = 1
+  local array = table_create(self.Size)
   local stack = {}
 
   local current = self.Root
   while current do
-    array[array_Top] = self[current]
-    array_Top += 1
+    table_insert(array, self[current])
     
     local left, right = self[current + LEFT], self[current + RIGHT]
     if right then
