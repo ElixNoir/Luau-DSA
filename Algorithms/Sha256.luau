@@ -2,7 +2,7 @@
 
 --[[
 
-  Sha256
+  Sha256 - A hashing algorithm
 
 ]]
 
