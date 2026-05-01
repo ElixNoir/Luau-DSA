@@ -2,7 +2,7 @@
 
 --[[
 
-  DFA (Deterministic Finite Automaton)
+  KeyDFA (Deterministic Finite Automaton, no key-value association)
 
 ]]
 
@@ -16,7 +16,7 @@
 local Module = {}
 Module.__index = Module
 
-export type DFA = typeof(setmetatable({} :: {
+export type KeyDFA = typeof(setmetatable({} :: {
   Top: number,
   [number]: number
 }, Module))
@@ -31,22 +31,23 @@ local string_byte = string.byte
 
 -- -- Functions
 
-function Module.new(): DFA
+function Module.new(): KeyDFA
   return setmetatable({
     Top = 1
-  }, Module) :: DFA
+  }, Module) :: KeyDFA
 end
 
 
 -- -- Methods
 
-function Module.add(self: DFA, key: string)
+function Module.set(self: KeyDFA, key: string)
+  local address: number
   local length = #key
   local state = 0
   local top = self.Top
 
   for index = 1, length - 1 do
-    local address = math_abs(state) * 0x100 + (string_byte(key, index) + 1)
+    address = math_abs(state) * 0x100 + (string_byte(key, index) + 1)
     local nextState = self[address]
     if not nextState then
       nextState = top
@@ -57,15 +58,17 @@ function Module.add(self: DFA, key: string)
     state = nextState
   end
 
-  local address = math_abs(state) * 0x100 + (string_byte(key, length) + 1)
-  if not self[address] then
+  address = math_abs(state) * 0x100 + (string_byte(key, length) + 1)
+  state = self[address]
+  if not state then
     self[address] = -top
+    self.Top = top + 1
+  elseif state > 0 then
+    self[address] = -state
   end
-
-  self.Top = top + 1
 end
 
-function Module.find(self: DFA, key: string): boolean
+function Module.find(self: KeyDFA, key: string): boolean
   local state = 0
 
   for index = 1, #key do
@@ -78,18 +81,20 @@ function Module.find(self: DFA, key: string): boolean
   return state < 0
 end
 
-function Module.remove(self: DFA, key: string): boolean
+function Module.remove(self: KeyDFA, key: string): boolean
+  local address: number
   local length = #key
   local state = 0
   
   for index = 1, length do
-    state = self[math_abs(state) * 0x100 + (string_byte(key, index) + 1)]
+    address = math_abs(state) * 0x100 + (string_byte(key, index) + 1)
+    state = self[address]
     if not state then
       return false
     end
   end
 
-  self[state] = math_abs(state)
+  self[address] = math_abs(state)
 
   return true
 end
