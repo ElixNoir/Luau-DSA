@@ -2,7 +2,7 @@
 
 --[[
 
-	Permutation
+	Permutation - A module for permuting
 
 ]]
 
@@ -33,14 +33,14 @@ local Factorials: {number} = {[0] = 1, 1, 2, 6, 24, 120, 720, 5040, 40320, 36288
 	Space Complexity: O(1)
 	Time Complexity: Ω(n^2), O(n^2)
 ]]
-function Module.permutationOffset(initialList: {any}, altList: {any}): number
+function Module.permutationOffset(initialList: {any}, alternateList: {any}): number
 	local length = #initialList
 
 	local available = table_clone(initialList)
 	local offset = 0
 
 	for position = 1, length do
-		local element = altList[position]
+		local element = alternateList[position]
 
 		local index = table_find(available, element) :: number
 
@@ -73,8 +73,8 @@ function Module.permutationOffsetWithFenwick(initialList: {any}, permutation: {a
 
 	for position = 1, length do
 		local rank = ranks[permutation[position]]
-		local unusedBefore = fenwickTree:prefixSum(rank - 1)
-		offset += unusedBefore * Factorials[length - position]
+		local unused = fenwickTree:prefixSum(rank - 1)
+		offset += unused * Factorials[length - position]
 
 		fenwickTree:update(rank, -1)
 	end
@@ -96,15 +96,15 @@ function Module.permutationFromOffsetWithFenwick(initialList: {any}, offset: num
 	local fenwickTree = FenwickTree.new(length)
 	fenwickTree:buildAllAlive(length)
 
-	for pos = 1, length do
-		local blockSize = Factorials[length - pos]
+	for position = 1, length do
+		local blockSize = Factorials[length - position]
 
 		local k = (offset / blockSize) // 1 + 1
 		offset %= blockSize
 
 		local rank = fenwickTree:findKth(k)
 
-		result[pos] = initialList[rank]
+		result[position] = initialList[rank]
 		fenwickTree:update(rank, -1)
 	end
 
@@ -117,16 +117,12 @@ end
 	Mispredictions: Likely
 	Stability: Unstable
 ]]
-function Module.permutationSort(list: {any}, offset: number)
+function Module.permute(list: {any}, offset: number)
 	local length = #list
 	local available = table_clone(list)
-	local inc = 1
-	for pos = 1, length do
+	for position = 1, length do
 		local factorial = Factorials[length - pos]
-
-		list[pos] = available[(offset // factorial) + inc]
-		inc += 1
-
+		list[position] = available[(offset // factorial) + position]
 		offset %= factorial
 	end
 end
