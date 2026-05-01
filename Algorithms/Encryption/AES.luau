@@ -2,7 +2,7 @@
 
 --[[
 
-  AES
+  AES (Advanced Encryption Standard) - A module for handling AES encryption
 
 ]]
 
