@@ -218,7 +218,7 @@ end
 function Module.upsert(self: SplayTree, key: any): false | number
   local current = self.Root
   if not current then
-    local address = allocate(self, key)
+    local address = allocate(self, key, false)
     self.Root = address
     return address
   end
